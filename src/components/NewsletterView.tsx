@@ -128,6 +128,24 @@ export function NewsletterView() {
             console.warn('board_id가 없는 article:', article);
           }
           
+          // 오늘 날짜인지 확인
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          let isNew = false;
+          
+          if (article.write_date) {
+            try {
+              const writeDate = new Date(article.write_date);
+              writeDate.setHours(0, 0, 0, 0);
+              const todayStr = today.toISOString().split('T')[0];
+              const writeDateStr = writeDate.toISOString().split('T')[0];
+              isNew = writeDateStr === todayStr;
+            } catch (error) {
+              // 날짜 파싱 오류 시 false
+              isNew = false;
+            }
+          }
+          
           return {
             article_id: article.article_id,
             board_id: article.board_id,
@@ -137,7 +155,7 @@ export function NewsletterView() {
             user_name: article.user_name || '알 수 없음',
             write_date: article.write_date || '',
             views: article.views || 0,
-            isNew: true, // 우선 true로 설정
+            isNew: isNew,
             matchedKeywords: [...new Set(matched)], // 중복 제거
             source: 'board'
           };
@@ -180,6 +198,15 @@ export function NewsletterView() {
     } else {
       setSelectedDomains([...selectedDomains, domainId]);
     }
+  };
+
+  const selectAllDomains = () => {
+    const allDomainIds = BUSINESS_DOMAINS.map(domain => domain.id);
+    setSelectedDomains(allDomainIds);
+  };
+
+  const clearDomainFilter = () => {
+    setSelectedDomains([]);
   };
 
   const filteredPosts = posts.filter(post => {
@@ -277,12 +304,36 @@ export function NewsletterView() {
           <>
             {/* 도메인 필터 UI */}
             <div className="mb-6">
-              <div className="flex items-center gap-2 mb-3">
-                <Globe className="w-4 h-4 text-gray-600" />
-                <span className="text-gray-900">관심 도메인 선택</span>
-                <Badge variant="secondary" className="ml-2">
-                  {selectedDomains.length}개 선택됨
-                </Badge>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-gray-600" />
+                  <span className="text-gray-900">관심 도메인 선택</span>
+                  <Badge variant="secondary" className="ml-2">
+                    {selectedDomains.length}개 선택됨
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-2">
+                  {BUSINESS_DOMAINS.length > 0 && selectedDomains.length < BUSINESS_DOMAINS.length && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={selectAllDomains}
+                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                    >
+                      전체 선택
+                    </Button>
+                  )}
+                  {selectedDomains.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearDomainFilter}
+                    >
+                      <X className="w-4 h-4 mr-1" />
+                      전체 해제
+                    </Button>
+                  )}
+                </div>
               </div>
               <div className="flex flex-wrap gap-2">
                 {BUSINESS_DOMAINS.map(domain => {

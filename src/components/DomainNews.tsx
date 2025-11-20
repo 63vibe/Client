@@ -3,6 +3,7 @@ import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { ExternalLink, TrendingUp, Clock } from 'lucide-react';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from './ui/pagination';
 import { getAllNewsArticles, NewsArticle } from '@/src/lib/news_articles';
 
 interface DomainNewsItem {
@@ -31,6 +32,7 @@ interface DomainNewsProps {
 export function DomainNews({ selectedDomains }: DomainNewsProps) {
   const [newsArticles, setNewsArticles] = useState<DomainNewsItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // 선택된 도메인 매핑
   const domainMap: Record<string, string> = {
@@ -72,10 +74,22 @@ export function DomainNews({ selectedDomains }: DomainNewsProps) {
     loadNewsArticles();
   }, []);
 
+  // selectedDomains 변경 시 첫 페이지로 리셋
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedDomains]);
+
   const activeDomainNames = selectedDomains.map(id => domainMap[id]);
   const filteredNews = newsArticles.filter(news => 
     activeDomainNames.includes(news.domain)
   );
+
+  // 페이지네이션 설정
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(filteredNews.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedNews = filteredNews.slice(startIndex, endIndex);
 
   if (loading) {
     return (
@@ -86,6 +100,10 @@ export function DomainNews({ selectedDomains }: DomainNewsProps) {
   }
 
   if (filteredNews.length === 0) {
+    return null;
+  }
+
+  if (selectedDomains.length === 0) {
     return null;
   }
 
@@ -125,7 +143,7 @@ export function DomainNews({ selectedDomains }: DomainNewsProps) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filteredNews.map((news, index) => (
+        {paginatedNews.map((news, index) => (
           <Card 
             key={`${news.link}-${index}`} 
             className="p-5 hover:shadow-md transition-shadow bg-white cursor-pointer"
@@ -174,6 +192,83 @@ export function DomainNews({ selectedDomains }: DomainNewsProps) {
           </Card>
         ))}
       </div>
+
+      {/* 페이지네이션 */}
+      {filteredNews.length > 0 && totalPages > 1 && (
+        <div className="flex justify-center mt-6">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious 
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (currentPage > 1) {
+                      setCurrentPage(prev => prev - 1);
+                    }
+                  }}
+                  className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+              
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                // 페이지 번호 표시 로직 (현재 페이지 주변만 표시)
+                if (
+                  page === 1 ||
+                  page === totalPages ||
+                  (page >= currentPage - 1 && page <= currentPage + 1)
+                ) {
+                  return (
+                    <PaginationItem key={page}>
+                      <PaginationLink
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setCurrentPage(page);
+                        }}
+                        isActive={currentPage === page}
+                        className="cursor-pointer"
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                } else if (
+                  page === currentPage - 2 ||
+                  page === currentPage + 2
+                ) {
+                  return (
+                    <PaginationItem key={page}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  );
+                }
+                return null;
+              })}
+              
+              <PaginationItem>
+                <PaginationNext 
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (currentPage < totalPages) {
+                      setCurrentPage(prev => prev + 1);
+                    }
+                  }}
+                  className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
+
+      {/* 게시물 개수 표시 */}
+      {filteredNews.length > 0 && (
+        <div className="text-center text-sm text-gray-500 mt-4">
+          {startIndex + 1} - {Math.min(endIndex, filteredNews.length)} / {filteredNews.length}개
+        </div>
+      )}
     </Card>
   );
 }
