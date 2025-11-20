@@ -1,3 +1,6 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { 
@@ -18,6 +21,9 @@ import {
   Tooltip, 
   ResponsiveContainer
 } from 'recharts';
+import { getAllArticles, Article } from '@/src/lib/articles';
+import { getKeywordsByEmployeeId } from '@/src/lib/keywords';
+import { getUserFromStorage } from '@/src/lib/auth';
 
 const newsletterData = [
   { month: '6월', count: 8 },
@@ -26,16 +32,6 @@ const newsletterData = [
   { month: '9월', count: 18 },
   { month: '10월', count: 22 },
   { month: '11월', count: 24 }
-];
-
-const weeklyPosts = [
-  { day: '월', count: 12 },
-  { day: '화', count: 15 },
-  { day: '수', count: 8 },
-  { day: '목', count: 18 },
-  { day: '금', count: 14 },
-  { day: '토', count: 5 },
-  { day: '일', count: 3 }
 ];
 
 const topKeywords = [
@@ -47,6 +43,172 @@ const topKeywords = [
 ];
 
 export function UserStats() {
+  const [weeklyPosts, setWeeklyPosts] = useState([
+    { day: '월', count: 0 },
+    { day: '화', count: 0 },
+    { day: '수', count: 0 },
+    { day: '목', count: 0 },
+    { day: '금', count: 0 },
+    { day: '토', count: 0 },
+    { day: '일', count: 0 }
+  ]);
+  const [loading, setLoading] = useState(true);
+  const [todayKeywordMatches, setTodayKeywordMatches] = useState(0);
+  const [registeredKeywordsCount, setRegisteredKeywordsCount] = useState(0);
+  const [thisWeekPostsCount, setThisWeekPostsCount] = useState(0);
+
+  // 이번 주 게시물 데이터 로드
+  useEffect(() => {
+    const loadWeeklyPosts = async () => {
+      try {
+        setLoading(true);
+        const articles = await getAllArticles();
+        
+        // 이번 주 시작일 계산 (월요일 00:00:00)
+        const today = new Date();
+        const dayOfWeek = today.getDay(); // 0(일요일) ~ 6(토요일)
+        const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // 월요일까지의 일수
+        const monday = new Date(today);
+        monday.setDate(today.getDate() + mondayOffset);
+        monday.setHours(0, 0, 0, 0);
+        
+        // 이번 주 일요일 계산
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        sunday.setHours(23, 59, 59, 999);
+        
+        // 이번 주 게시물 필터링
+        const thisWeekArticles = articles.filter((article: Article) => {
+          if (!article.write_date) return false;
+          const writeDate = new Date(article.write_date);
+          return writeDate >= monday && writeDate <= sunday;
+        });
+        
+        // 이번 주 총 게시물 수 설정
+        setThisWeekPostsCount(thisWeekArticles.length);
+        
+        // 요일별로 그룹화
+        const dayCounts: Record<number, number> = {
+          0: 0, // 일요일
+          1: 0, // 월요일
+          2: 0, // 화요일
+          3: 0, // 수요일
+          4: 0, // 목요일
+          5: 0, // 금요일
+          6: 0  // 토요일
+        };
+        
+        thisWeekArticles.forEach((article: Article) => {
+          if (article.write_date) {
+            const writeDate = new Date(article.write_date);
+            const dayOfWeek = writeDate.getDay();
+            dayCounts[dayOfWeek]++;
+          }
+        });
+        
+        // 차트 데이터 형식으로 변환
+        const weeklyData = [
+          { day: '월', count: dayCounts[1] },
+          { day: '화', count: dayCounts[2] },
+          { day: '수', count: dayCounts[3] },
+          { day: '목', count: dayCounts[4] },
+          { day: '금', count: dayCounts[5] },
+          { day: '토', count: dayCounts[6] },
+          { day: '일', count: dayCounts[0] }
+        ];
+        
+        setWeeklyPosts(weeklyData);
+      } catch (error) {
+        console.error('주간 게시물 데이터 로드 오류:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadWeeklyPosts();
+  }, []);
+
+  // 등록된 키워드 개수 로드
+  useEffect(() => {
+    const loadRegisteredKeywordsCount = async () => {
+      try {
+        const user = getUserFromStorage();
+        if (!user) {
+          setRegisteredKeywordsCount(0);
+          return;
+        }
+
+        const keywords = await getKeywordsByEmployeeId(user.employee_id);
+        setRegisteredKeywordsCount(keywords.length);
+      } catch (error) {
+        console.error('키워드 개수 로드 오류:', error);
+        setRegisteredKeywordsCount(0);
+      }
+    };
+
+    loadRegisteredKeywordsCount();
+  }, []);
+
+  // 오늘 올라온 게시물 중 키워드 매칭 개수 계산
+  useEffect(() => {
+    const loadTodayKeywordMatches = async () => {
+      try {
+        const user = getUserFromStorage();
+        if (!user) {
+          setTodayKeywordMatches(0);
+          return;
+        }
+
+        // 사용자의 키워드 목록 로드
+        const keywords = await getKeywordsByEmployeeId(user.employee_id);
+        const userKeywords = keywords.map(k => k.text.toLowerCase());
+        
+        if (userKeywords.length === 0) {
+          setTodayKeywordMatches(0);
+          return;
+        }
+
+        // 모든 게시물 로드
+        const articles = await getAllArticles();
+        
+        // 오늘 날짜 계산
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayStr = today.toISOString().split('T')[0];
+        
+        // 오늘 올라온 게시물 필터링 및 키워드 매칭 확인
+        const todayArticles = articles.filter((article: Article) => {
+          if (!article.write_date) return false;
+          const writeDateStr = article.write_date.split('T')[0];
+          return writeDateStr === todayStr;
+        });
+
+        // 키워드와 일치하는 게시물 개수 계산
+        let matchCount = 0;
+        todayArticles.forEach((article: Article) => {
+          const subject = (article.subject || '').toLowerCase();
+          const originalContent = (article.original_content || '').toLowerCase();
+          const searchText = `${subject} ${originalContent}`;
+          
+          // 사용자 키워드 중 하나라도 포함되어 있으면 매칭
+          const hasMatch = userKeywords.some(keyword => 
+            searchText.includes(keyword)
+          );
+          
+          if (hasMatch) {
+            matchCount++;
+          }
+        });
+
+        setTodayKeywordMatches(matchCount);
+      } catch (error) {
+        console.error('키워드 매칭 계산 오류:', error);
+        setTodayKeywordMatches(0);
+      }
+    };
+
+    loadTodayKeywordMatches();
+  }, []);
   return (
     <div className="space-y-6">
       <Card className="p-6">
@@ -80,7 +242,7 @@ export function UserStats() {
               이번 주
             </Badge>
           </div>
-          <div className="text-gray-900 mb-1">75</div>
+          <div className="text-gray-900 mb-1">{thisWeekPostsCount}</div>
           <div className="text-sm text-gray-600">총 게시물 수</div>
         </Card>
 
@@ -93,7 +255,7 @@ export function UserStats() {
               활성
             </Badge>
           </div>
-          <div className="text-gray-900 mb-1">7</div>
+          <div className="text-gray-900 mb-1">{registeredKeywordsCount}</div>
           <div className="text-sm text-gray-600">등록된 키워드</div>
         </Card>
 
@@ -106,7 +268,7 @@ export function UserStats() {
               오늘
             </Badge>
           </div>
-          <div className="text-gray-900 mb-1">12</div>
+          <div className="text-gray-900 mb-1">{todayKeywordMatches}</div>
           <div className="text-sm text-gray-600">키워드 매칭</div>
         </Card>
       </div>
@@ -134,15 +296,21 @@ export function UserStats() {
 
         <Card className="p-6">
           <h3 className="text-gray-900 mb-4">주간 게시물 현황</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={weeklyPosts}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="day" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="count" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          {loading ? (
+            <div className="flex items-center justify-center h-[250px]">
+              <p className="text-gray-500">데이터를 불러오는 중...</p>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={weeklyPosts}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="day" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="count" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </Card>
       </div>
 
