@@ -131,6 +131,10 @@ export function NewsletterView() {
     setSelectedKeywords([]);
   };
 
+  const selectAllKeywords = () => {
+    setSelectedKeywords([...availableKeywords]);
+  };
+
   const toggleDomain = (domainId: string) => {
     if (selectedDomains.includes(domainId)) {
       setSelectedDomains(selectedDomains.filter(id => id !== domainId));
@@ -206,18 +210,18 @@ export function NewsletterView() {
                 variant={viewMode === 'board' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setViewMode('board')}
-                className={viewMode === 'board' ? 'bg-white shadow-sm' : 'hover:bg-gray-200'}
+                className={viewMode === 'board' ? 'bg-white shadow-sm text-gray-900 hover:bg-white' : 'hover:bg-gray-200 text-gray-700'}
               >
-                <Building2 className="w-4 h-4 mr-2" />
+                <Building2 className={`w-4 h-4 mr-2 ${viewMode === 'board' ? 'text-gray-900' : 'text-gray-600'}`} />
                 사내 게시판
               </Button>
               <Button
                 variant={viewMode === 'domain' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setViewMode('domain')}
-                className={viewMode === 'domain' ? 'bg-white shadow-sm' : 'hover:bg-gray-200'}
+                className={viewMode === 'domain' ? 'bg-white shadow-sm text-gray-900 hover:bg-white' : 'hover:bg-gray-200 text-gray-700'}
               >
-                <Globe className="w-4 h-4 mr-2" />
+                <Globe className={`w-4 h-4 mr-2 ${viewMode === 'domain' ? 'text-gray-900' : 'text-gray-600'}`} />
                 도메인 동향
               </Button>
             </div>
@@ -315,16 +319,28 @@ export function NewsletterView() {
                   <Tag className="w-4 h-4 text-gray-600" />
                   <span className="text-gray-900">관심 키워드로 필터링</span>
                 </div>
-                {selectedKeywords.length > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={clearKeywordFilter}
-                  >
-                    <X className="w-4 h-4 mr-1" />
-                    전체 해제
-                  </Button>
-                )}
+                <div className="flex items-center gap-2">
+                  {availableKeywords.length > 0 && selectedKeywords.length < availableKeywords.length && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={selectAllKeywords}
+                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                    >
+                      전체 선택
+                    </Button>
+                  )}
+                  {selectedKeywords.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearKeywordFilter}
+                    >
+                      <X className="w-4 h-4 mr-1" />
+                      전체 해제
+                    </Button>
+                  )}
+                </div>
               </div>
               <div className="flex flex-wrap gap-2">
                 {availableKeywords.map(keyword => {
