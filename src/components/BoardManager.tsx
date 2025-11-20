@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -10,6 +10,8 @@ import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
 import { Plus, Trash2, Link2, RefreshCw, CheckCircle, XCircle, AlertTriangle, Globe } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { getUserDomainsByEmployeeId, replaceUserDomains } from '@/src/lib/user_domains';
+import { getUserFromStorage } from '@/src/lib/auth';
 
 interface Board {
   id: string;
@@ -97,7 +99,59 @@ export function BoardManager({ isAdmin }: BoardManagerProps) {
   const [newBoardUrl, setNewBoardUrl] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedBoards, setSelectedBoards] = useState<string[]>(mockBoards.filter(b => b.isActive).map(b => b.id));
-  const [selectedDomains, setSelectedDomains] = useState<string[]>(['ai', 'finance']);
+  const [selectedDomains, setSelectedDomains] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  // 도메인 ID와 실제 도메인명 매핑
+  const domainIdToName: Record<string, string> = {
+    'ai': 'AI',
+    'finance': '금융',
+    'defense': '방산',
+    'energy': '에너지',
+    'manufacturing': '제조',
+    'leisure': '레저'
+  };
+
+  const domainNameToId: Record<string, string> = {
+    'AI': 'ai',
+    '금융': 'finance',
+    '방산': 'defense',
+    '에너지': 'energy',
+    '제조': 'manufacturing',
+    '레저': 'leisure'
+  };
+
+  // 사용자의 선택한 도메인 로드
+  useEffect(() => {
+    const loadUserDomains = async () => {
+      try {
+        setLoading(true);
+        const user = getUserFromStorage();
+        if (!user) {
+          setSelectedDomains([]);
+          return;
+        }
+
+        const userDomains = await getUserDomainsByEmployeeId(user.employee_id);
+        // 도메인명을 ID로 변환
+        const domainIds = userDomains
+          .map(ud => domainNameToId[ud.domain])
+          .filter(id => id !== undefined) as string[];
+        
+        setSelectedDomains(domainIds);
+      } catch (error) {
+        console.error('도메인 로드 오류:', error);
+        setSelectedDomains([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (!isAdmin) {
+      loadUserDomains();
+    }
+  }, [isAdmin]);
 
   const handleToggleBoard = (id: string) => {
     setBoards(boards.map(board => 
@@ -147,6 +201,32 @@ export function BoardManager({ isAdmin }: BoardManagerProps) {
       setSelectedDomains(selectedDomains.filter(domainId => domainId !== id));
     } else {
       setSelectedDomains([...selectedDomains, id]);
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    try {
+      setSaving(true);
+      const user = getUserFromStorage();
+      if (!user) {
+        alert('로그인이 필요합니다.');
+        return;
+      }
+
+      // 선택된 도메인 ID를 도메인명으로 변환
+      const domainNames = selectedDomains
+        .map(id => domainIdToName[id])
+        .filter(name => name !== undefined) as string[];
+
+      // 사용자의 도메인 설정 저장
+      await replaceUserDomains(user.employee_id, domainNames);
+      
+      alert('설정이 저장되었습니다.');
+    } catch (error) {
+      console.error('설정 저장 오류:', error);
+      alert('설정 저장 중 오류가 발생했습니다.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -373,28 +453,34 @@ export function BoardManager({ isAdmin }: BoardManagerProps) {
         <p className="text-sm text-gray-600 mb-4">
           외부 온라인 뉴스에서 선택한 도메인의 최신 동향을 함께 받아볼 수 있습니다
         </p>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {BUSINESS_DOMAINS.map(domain => (
-            <div
-              key={domain.id}
-              className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-blue-300 transition-colors"
-            >
-              <Checkbox
-                id={`domain-${domain.id}`}
-                checked={selectedDomains.includes(domain.id)}
-                onCheckedChange={() => toggleDomainSelection(domain.id)}
-              />
-              <Label htmlFor={`domain-${domain.id}`} className="cursor-pointer">
-                <span className="text-gray-900">{domain.name}</span>
-              </Label>
-            </div>
-          ))}
-        </div>
+        {loading ? (
+          <div className="text-center py-8 text-gray-500">
+            도메인 정보를 불러오는 중...
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {BUSINESS_DOMAINS.map(domain => (
+              <div
+                key={domain.id}
+                className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-blue-300 transition-colors"
+              >
+                <Checkbox
+                  id={`domain-${domain.id}`}
+                  checked={selectedDomains.includes(domain.id)}
+                  onCheckedChange={() => toggleDomainSelection(domain.id)}
+                />
+                <Label htmlFor={`domain-${domain.id}`} className="cursor-pointer">
+                  <span className="text-gray-900">{domain.name}</span>
+                </Label>
+              </div>
+            ))}
+          </div>
+        )}
       </Card>
 
       <div className="flex justify-end">
-        <Button>
-          설정 저장
+        <Button onClick={handleSaveSettings} disabled={saving || loading}>
+          {saving ? '저장 중...' : '설정 저장'}
         </Button>
       </div>
     </div>
