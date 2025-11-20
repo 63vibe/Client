@@ -17,6 +17,7 @@ export interface Article {
   updated_at: string;
 }
 
+
 /**
  * 모든 게시물 조회
  */
