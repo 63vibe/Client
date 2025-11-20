@@ -25,10 +25,10 @@ const DOMAIN_COLORS: Record<string, string> = {
 };
 
 interface DomainNewsProps {
-  selectedDomains?: string[];
+  selectedDomains: string[]; // NewsletterView에서 전달받는 도메인 ID 목록
 }
 
-export function DomainNews({ selectedDomains = ['ai', 'finance'] }: DomainNewsProps) {
+export function DomainNews({ selectedDomains }: DomainNewsProps) {
   const [newsArticles, setNewsArticles] = useState<DomainNewsItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -122,19 +122,6 @@ export function DomainNews({ selectedDomains = ['ai', 'finance'] }: DomainNewsPr
           <h3 className="text-gray-900">사업 도메인 최신 동향</h3>
           <p className="text-sm text-gray-600">외부 온라인 뉴스 크롤링 기반</p>
         </div>
-      </div>
-
-      <div className="flex items-center gap-2 mb-4">
-        <span className="text-sm text-gray-600">선택된 도메인:</span>
-        {activeDomainNames.map(domain => (
-          <Badge 
-            key={domain} 
-            variant="outline" 
-            className={DOMAIN_COLORS[domain]}
-          >
-            {domain}
-          </Badge>
-        ))}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

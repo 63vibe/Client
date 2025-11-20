@@ -13,6 +13,7 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import { getKeywordsByEmployeeId } from '@/src/lib/keywords';
 import { getUserFromStorage } from '@/src/lib/auth';
 import { getAllArticles, Article } from '@/src/lib/articles';
+import { getUserDomainsByEmployeeId } from '@/src/lib/user_domains';
 
 const BUSINESS_DOMAINS = [
   { id: 'manufacturing', name: '제조' },
@@ -44,12 +45,50 @@ export function NewsletterView() {
   const [filterDate, setFilterDate] = useState('all');
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'board' | 'domain'>('board'); // 토글 상태
-  const [selectedDomains, setSelectedDomains] = useState<string[]>(['ai', 'finance']); // 선택된 도메인
+  const [selectedDomains, setSelectedDomains] = useState<string[]>([]); // 선택된 도메인
   const [availableKeywords, setAvailableKeywords] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
 
   const boards = ['all', ...Array.from(new Set(posts.map(p => p.board)))];
+
+  // 도메인명과 ID 매핑
+  const domainNameToId: Record<string, string> = {
+    'AI': 'ai',
+    '금융': 'finance',
+    '방산': 'defense',
+    '에너지': 'energy',
+    '제조': 'manufacturing',
+    '레저': 'leisure'
+  };
+
+  // 사용자의 구독 도메인 로드
+  useEffect(() => {
+    const loadUserDomains = async () => {
+      try {
+        const user = getUserFromStorage();
+        if (!user) {
+          setSelectedDomains(['ai', 'finance']); // 로그인하지 않은 경우 기본값
+          return;
+        }
+
+        const userDomains = await getUserDomainsByEmployeeId(user.employee_id);
+        // 도메인명을 ID로 변환
+        const domainIds = userDomains
+          .map(ud => domainNameToId[ud.domain])
+          .filter(id => id !== undefined) as string[];
+        
+        // 사용자가 구독한 도메인이 있으면 그것을 사용, 없으면 기본값
+        setSelectedDomains(domainIds.length > 0 ? domainIds : ['ai', 'finance']);
+      } catch (error) {
+        console.error('사용자 도메인 로드 오류:', error);
+        // 오류 발생 시 기본값 사용
+        setSelectedDomains(['ai', 'finance']);
+      }
+    };
+
+    loadUserDomains();
+  }, []);
 
   // 게시물 데이터와 키워드 로드
   useEffect(() => {
