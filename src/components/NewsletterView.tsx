@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NewsletterCard } from './NewsletterCard';
 import { DomainNews } from './DomainNews';
 import { Button } from './ui/button';
@@ -9,6 +9,8 @@ import { Badge } from './ui/badge';
 import { Card } from './ui/card';
 import { Calendar, Search, RefreshCw, Filter, X, Tag, Globe, TrendingUp, Building2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { getKeywordsByEmployeeId } from '@/src/lib/keywords';
+import { getUserFromStorage } from '@/src/lib/auth';
 
 // Mock data for demonstration
 const mockPosts = [
@@ -158,9 +160,6 @@ const mockPosts = [
   }
 ];
 
-// 사용 가능한 모든 키워드 (등록된 키워드)
-const availableKeywords = ['워크샵', 'AI', '개발', '보안', '운영', 'React', '프로젝트'];
-
 const BUSINESS_DOMAINS = [
   { id: 'manufacturing', name: '제조' },
   { id: 'finance', name: '금융' },
@@ -178,8 +177,32 @@ export function NewsletterView() {
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'board' | 'domain'>('board'); // 토글 상태
   const [selectedDomains, setSelectedDomains] = useState<string[]>(['ai', 'finance']); // 선택된 도메인
+  const [availableKeywords, setAvailableKeywords] = useState<string[]>([]);
 
   const boards = ['all', ...Array.from(new Set(mockPosts.map(p => p.board)))];
+
+  // 로그인한 사용자의 키워드 목록 로드
+  useEffect(() => {
+    const loadUserKeywords = async () => {
+      try {
+        const user = getUserFromStorage();
+        if (!user) {
+          setAvailableKeywords([]);
+          return;
+        }
+
+        const keywords = await getKeywordsByEmployeeId(user.employee_id);
+        // 키워드의 text 값만 추출
+        const keywordTexts = keywords.map(k => k.text);
+        setAvailableKeywords(keywordTexts);
+      } catch (error) {
+        console.error('키워드 로드 오류:', error);
+        setAvailableKeywords([]);
+      }
+    };
+
+    loadUserKeywords();
+  }, []);
 
   const toggleKeyword = (keyword: string) => {
     if (selectedKeywords.includes(keyword)) {
