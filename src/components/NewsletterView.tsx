@@ -24,6 +24,7 @@ const BUSINESS_DOMAINS = [
 
 interface Post {
   article_id: string;
+  board_id: number;
   board: string;
   subject: string;
   content_summary: string;
@@ -81,8 +82,14 @@ export function NewsletterView() {
             }
           });
           
+          // 디버깅: board_id 확인
+          if (!article.board_id) {
+            console.warn('board_id가 없는 article:', article);
+          }
+          
           return {
             article_id: article.article_id,
+            board_id: article.board_id,
             board: article.board_name || '알 수 없음',
             subject: subject,
             content_summary: article.content_summary || '',
@@ -94,6 +101,9 @@ export function NewsletterView() {
             source: 'board'
           };
         });
+        
+        // 디버깅: 변환된 데이터 확인
+        console.log('변환된 posts 샘플:', transformedPosts.slice(0, 3));
 
         setPosts(transformedPosts);
       } catch (error) {

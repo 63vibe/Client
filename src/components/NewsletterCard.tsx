@@ -5,6 +5,7 @@ import { Card } from './ui/card';
 
 interface Post {
   article_id: string;
+  board_id: number;
   board: string;
   subject: string;
   content_summary: string;
@@ -45,8 +46,27 @@ export function NewsletterCard({ post, index }: NewsletterCardProps) {
     }
   };
 
+  const handleCardClick = () => {
+    // 디버깅: post 객체 확인
+    console.log('클릭된 post:', post);
+    console.log('post.board_id:', post.board_id);
+    console.log('post.article_id:', post.article_id);
+    
+    if (!post.board_id) {
+      console.error('board_id가 없습니다!', post);
+      return;
+    }
+    
+    const url = `https://hsi.cleverse.kr/board/${post.board_id}/COMPANY/${post.article_id}`;
+    console.log('열리는 URL:', url);
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
   return (
-    <Card className={`p-6 hover:shadow-md transition-shadow ${post.matchedKeywords.length > 0 ? 'border-blue-300 bg-blue-50/30' : ''}`}>
+    <Card 
+      className={`p-6 hover:shadow-md transition-shadow cursor-pointer ${post.matchedKeywords.length > 0 ? 'border-blue-300 bg-blue-50/30' : ''}`}
+      onClick={handleCardClick}
+    >
       <div className="flex items-start gap-4">
         <div className="flex-shrink-0 w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center text-gray-600">
           {index + 1}
@@ -72,7 +92,7 @@ export function NewsletterCard({ post, index }: NewsletterCardProps) {
                 )}
               </div>
               
-              <h3 className="text-gray-900 mb-2 hover:text-blue-600 cursor-pointer">
+              <h3 className="text-gray-900 mb-2 hover:text-blue-600">
                 {post.subject}
               </h3>
               
@@ -109,7 +129,15 @@ export function NewsletterCard({ post, index }: NewsletterCardProps) {
               )}
             </div>
 
-            <Button variant="ghost" size="sm" className="flex-shrink-0">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="flex-shrink-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCardClick();
+              }}
+            >
               <ExternalLink className="w-4 h-4" />
             </Button>
           </div>
