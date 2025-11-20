@@ -1,10 +1,12 @@
+'use client';
+
 import { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { ArrowLeft, Mail, Lock, CheckCircle, AlertCircle } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface SignUpProps {
   onBack: () => void;

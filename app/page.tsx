@@ -1,16 +1,18 @@
-import { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
-import { NewsletterView } from './components/NewsletterView';
-import { BoardManager } from './components/BoardManager';
-import { KeywordManager } from './components/KeywordManager';
-import { SubscriptionSettings } from './components/SubscriptionSettings';
-import { AdminDashboard } from './components/AdminDashboard';
-import { UserStats } from './components/UserStats';
-import { SignUp } from './components/SignUp';
-import { Newspaper, Settings, Tag, LayoutDashboard, Database, BarChart3, LogIn } from 'lucide-react';
-import { Button } from './components/ui/button';
+'use client';
 
-export default function App() {
+import { useState } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/src/components/ui/tabs';
+import { NewsletterView } from '@/src/components/NewsletterView';
+import { BoardManager } from '@/src/components/BoardManager';
+import { KeywordManager } from '@/src/components/KeywordManager';
+import { SubscriptionSettings } from '@/src/components/SubscriptionSettings';
+import { AdminDashboard } from '@/src/components/AdminDashboard';
+import { UserStats } from '@/src/components/UserStats';
+import { SignUp } from '@/src/components/SignUp';
+import { Newspaper, Settings, Tag, LayoutDashboard, Database, BarChart3, LogIn } from 'lucide-react';
+import { Button } from '@/src/components/ui/button';
+
+export default function Home() {
   const [activeTab, setActiveTab] = useState('newsletter');
   const [isAdmin, setIsAdmin] = useState(false); // 관리자/일반 유저 구분
   const [showSignUp, setShowSignUp] = useState(false);
@@ -101,7 +103,7 @@ export default function App() {
           </TabsContent>
 
           <TabsContent value="boards" className="space-y-6">
-            <BoardManager isAdmin={isAdmin} isAdmin={isAdmin} />
+            <BoardManager isAdmin={isAdmin} />
           </TabsContent>
 
           <TabsContent value="keywords" className="space-y-6">
@@ -126,3 +128,4 @@ export default function App() {
     </div>
   );
 }
+

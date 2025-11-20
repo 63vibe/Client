@@ -1,3 +1,5 @@
+'use client';
+
 import { useState } from 'react';
 import { NewsletterCard } from './NewsletterCard';
 import { DomainNews } from './DomainNews';
