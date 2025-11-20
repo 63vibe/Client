@@ -11,154 +11,7 @@ import { Calendar, Search, RefreshCw, Filter, X, Tag, Globe, TrendingUp, Buildin
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { getKeywordsByEmployeeId } from '@/src/lib/keywords';
 import { getUserFromStorage } from '@/src/lib/auth';
-
-// Mock data for demonstration
-const mockPosts = [
-  {
-    id: '1',
-    board: '공지사항',
-    title: '2024년 하반기 전사 워크샵 안내',
-    summary: '11월 25-26일 제주도에서 전사 워크샵이 진행됩니다. 참석 여부는 11월 20일까지 회신 바랍니다.',
-    keywords: ['워크샵', '행사', '전사'],
-    author: '인사팀',
-    date: '2024-11-18',
-    views: 342,
-    isNew: true,
-    matchedKeywords: ['워크샵'],
-    source: 'board' // board or naver
-  },
-  {
-    id: '2',
-    board: '개발팀',
-    title: '[긴급] 운영 서버 보안 패치 일정 공지',
-    summary: '11월 20일 02:00-04:00 사이 보안 패치 진행으로 일시적인 서비스 중단이 예정되어 있습니다. 모니터링 당번 확인 요망.',
-    keywords: ['보안', '운영', '긴급'],
-    author: 'DevOps팀',
-    date: '2024-11-18',
-    views: 156,
-    isNew: true,
-    matchedKeywords: ['보안', '운영'],
-    source: 'board'
-  },
-  {
-    id: '3',
-    board: '프로젝트',
-    title: 'AI 챗봇 프로젝트 1차 스프린트 회고',
-    summary: '11월 1-15일 진행된 1차 스프린트 완료. MVP 기능 구현 완료, 다음 스프린트는 성능 최적화 및 UX 개선에 집중 예정.',
-    keywords: ['AI', '프로젝트', '스프린트'],
-    author: '김철수',
-    date: '2024-11-17',
-    views: 89,
-    isNew: false,
-    matchedKeywords: ['AI'],
-    source: 'board'
-  },
-  {
-    id: '4',
-    board: '복지',
-    title: '사내 도서 구입 신청 안내 (11월)',
-    summary: '업무 관련 도서 구입 신청을 11월 22일까지 받습니다. 1인당 월 5만원 한도, 승인 후 구입 가능.',
-    keywords: ['복지', '도서', '신청'],
-    author: '총무팀',
-    date: '2024-11-17',
-    views: 234,
-    isNew: false,
-    matchedKeywords: [],
-    source: 'board'
-  },
-  {
-    id: '5',
-    board: '기술블로그',
-    title: 'React 19 주요 변경사항 및 마이그레이션 가이드',
-    summary: 'React 19의 새로운 기능(Server Components, Actions 등)과 기존 프로젝트 마이그레이션 시 주의사항을 정리했습니다.',
-    keywords: ['React', '기술', '개발'],
-    author: '이영희',
-    date: '2024-11-16',
-    views: 421,
-    isNew: false,
-    matchedKeywords: ['개발'],
-    source: 'board'
-  },
-  {
-    id: '6',
-    board: '공지사항',
-    title: '연말 인사 평가 일정 및 가이드',
-    summary: '12월 1-15일 자기평가 작성, 12월 18-20일 1:1 면담 진행 예정. 평가 시스템은 11월 25일 오픈.',
-    keywords: ['인사', '평가', '연말'],
-    author: '인사팀',
-    date: '2024-11-16',
-    views: 512,
-    isNew: false,
-    matchedKeywords: [],
-    source: 'board'
-  },
-  {
-    id: '7',
-    board: '개발팀',
-    title: '새로운 코드 리뷰 가이드라인 적용',
-    summary: 'PR 크기는 500줄 이하 권장, 리뷰어는 최소 2명 지정, 24시간 내 1차 피드백 원칙으로 변경됩니다.',
-    keywords: ['코드리뷰', '개발', '가이드'],
-    author: 'CTO',
-    date: '2024-11-15',
-    views: 287,
-    isNew: false,
-    matchedKeywords: ['개발'],
-    source: 'board'
-  },
-  {
-    id: '8',
-    board: '마케팅팀',
-    title: 'Q4 마케팅 캠페인 성과 공유',
-    summary: '11월 진행된 블랙프라이데이 캠페인 결과: 전환율 전월 대비 43% 상승, ROI 2.8배 달성. 주요 성공 요인 분석 포함.',
-    keywords: ['마케팅', '성과', '캠페인'],
-    author: '박지민',
-    date: '2024-11-15',
-    views: 178,
-    isNew: false,
-    matchedKeywords: [],
-    source: 'board'
-  },
-  // 네이버 뉴스 추가
-  {
-    id: 'n1',
-    board: '네이버 뉴스',
-    title: 'AI 기술 혁신, 2024년 주요 트렌드 정리',
-    summary: '생성형 AI부터 멀티모달 AI까지, 올해 가장 주목받은 인공지능 기술 발전 방향과 산업별 적용 사례를 종합 정리했습니다.',
-    keywords: ['AI', '기술', '트렌드'],
-    author: '네이버 뉴스',
-    date: '2024-11-18',
-    views: 1250,
-    isNew: true,
-    matchedKeywords: ['AI'],
-    source: 'naver'
-  },
-  {
-    id: 'n2',
-    board: '네이버 뉴스',
-    title: '개발자 연봉 협상 가이드, 실전 팁 공개',
-    summary: 'IT 업계 개발자들의 연봉 협상 전략과 성공 사례를 분석. 효과적인 협상 타이밍과 준비 방법을 상세히 소개합니다.',
-    keywords: ['개발', '커리어', '연봉'],
-    author: '네이버 뉴스',
-    date: '2024-11-17',
-    views: 890,
-    isNew: false,
-    matchedKeywords: ['개발'],
-    source: 'naver'
-  },
-  {
-    id: 'n3',
-    board: '네이버 뉴스',
-    title: '클라우드 보안 강화 필수, 최신 위협 대응법',
-    summary: '최근 급증하는 클라우드 보안 위협에 대응하기 위한 기업의 보안 전략과 실전 적용 가능한 보안 솔루션을 소개합니다.',
-    keywords: ['보안', '클라우드', '운영'],
-    author: '네이버 뉴스',
-    date: '2024-11-16',
-    views: 634,
-    isNew: false,
-    matchedKeywords: ['보안', '운영'],
-    source: 'naver'
-  }
-];
+import { getAllArticles, Article } from '@/src/lib/articles';
 
 const BUSINESS_DOMAINS = [
   { id: 'manufacturing', name: '제조' },
@@ -169,8 +22,21 @@ const BUSINESS_DOMAINS = [
   { id: 'leisure', name: '레저' }
 ];
 
+interface Post {
+  article_id: string;
+  board: string;
+  subject: string;
+  content_summary: string;
+  user_name: string;
+  write_date: string;
+  views: number;
+  isNew: boolean;
+  matchedKeywords: string[];
+  source: string;
+}
+
 export function NewsletterView() {
-  const [posts, setPosts] = useState(mockPosts);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterBoard, setFilterBoard] = useState('all');
   const [filterDate, setFilterDate] = useState('all');
@@ -178,30 +44,67 @@ export function NewsletterView() {
   const [viewMode, setViewMode] = useState<'board' | 'domain'>('board'); // 토글 상태
   const [selectedDomains, setSelectedDomains] = useState<string[]>(['ai', 'finance']); // 선택된 도메인
   const [availableKeywords, setAvailableKeywords] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const boards = ['all', ...Array.from(new Set(mockPosts.map(p => p.board)))];
+  const boards = ['all', ...Array.from(new Set(posts.map(p => p.board)))];
 
-  // 로그인한 사용자의 키워드 목록 로드
+  // 게시물 데이터와 키워드 로드
   useEffect(() => {
-    const loadUserKeywords = async () => {
+    const loadData = async () => {
       try {
+        setLoading(true);
+        
+        // 게시물 데이터 로드
+        const articles = await getAllArticles();
+        
+        // 로그인한 사용자의 키워드 목록 로드
         const user = getUserFromStorage();
-        if (!user) {
-          setAvailableKeywords([]);
-          return;
+        let userKeywords: string[] = [];
+        
+        if (user) {
+          const keywords = await getKeywordsByEmployeeId(user.employee_id);
+          userKeywords = keywords.map(k => k.text);
+          setAvailableKeywords(userKeywords);
         }
 
-        const keywords = await getKeywordsByEmployeeId(user.employee_id);
-        // 키워드의 text 값만 추출
-        const keywordTexts = keywords.map(k => k.text);
-        setAvailableKeywords(keywordTexts);
+        // 게시물 데이터를 Post 형식으로 변환하고 matchedKeywords 계산
+        const transformedPosts: Post[] = articles.map((article: Article) => {
+          const subject = article.subject || '';
+          const originalContent = article.original_content || '';
+          const searchText = `${subject} ${originalContent}`.toLowerCase();
+          
+          // 유저 키워드 중 게시물의 subject나 original_content에 포함된 키워드 찾기
+          const matched: string[] = [];
+          userKeywords.forEach(keyword => {
+            if (searchText.includes(keyword.toLowerCase())) {
+              matched.push(keyword);
+            }
+          });
+          
+          return {
+            article_id: article.article_id,
+            board: article.board_name || '알 수 없음',
+            subject: subject,
+            content_summary: article.content_summary || '',
+            user_name: article.user_name || '알 수 없음',
+            write_date: article.write_date || '',
+            views: article.views || 0,
+            isNew: true, // 우선 true로 설정
+            matchedKeywords: [...new Set(matched)], // 중복 제거
+            source: 'board'
+          };
+        });
+
+        setPosts(transformedPosts);
       } catch (error) {
-        console.error('키워드 로드 오류:', error);
-        setAvailableKeywords([]);
+        console.error('데이터 로드 오류:', error);
+        setPosts([]);
+      } finally {
+        setLoading(false);
       }
     };
 
-    loadUserKeywords();
+    loadData();
   }, []);
 
   const toggleKeyword = (keyword: string) => {
@@ -226,14 +129,28 @@ export function NewsletterView() {
 
   const filteredPosts = posts.filter(post => {
     const matchesSearch = searchQuery === '' || 
-      post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.summary.toLowerCase().includes(searchQuery.toLowerCase());
+      post.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      post.content_summary.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesBoard = filterBoard === 'all' || post.board === filterBoard;
     
-    const matchesDate = filterDate === 'all' || 
-      (filterDate === 'today' && post.date === '2024-11-18') ||
-      (filterDate === 'week' && new Date(post.date) >= new Date('2024-11-12'));
+    let matchesDate = true;
+    if (filterDate !== 'all' && post.write_date) {
+      const today = new Date().toISOString().split('T')[0];
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      const weekAgoStr = weekAgo.toISOString().split('T')[0];
+      const postDate = post.write_date.split('T')[0]; // TIMESTAMP에서 날짜만 추출
+      
+      if (filterDate === 'today') {
+        matchesDate = postDate === today;
+      } else if (filterDate === 'week') {
+        matchesDate = postDate >= weekAgoStr;
+      }
+    } else if (filterDate !== 'all' && !post.write_date) {
+      // 날짜 필터가 설정되었지만 write_date가 없는 경우 제외
+      matchesDate = false;
+    }
     
     const matchesKeywords = selectedKeywords.length === 0 || 
       selectedKeywords.some(keyword => post.matchedKeywords.includes(keyword));
@@ -445,14 +362,22 @@ export function NewsletterView() {
 
       {viewMode === 'board' && (
         <div className="space-y-3">
-          {filteredPosts.map((post, index) => (
-            <NewsletterCard key={post.id} post={post} index={index} />
-          ))}
-
-          {filteredPosts.length === 0 && (
+          {loading ? (
             <div className="bg-white rounded-lg p-12 border border-gray-200 text-center">
-              <p className="text-gray-500">검색 결과가 없습니다.</p>
+              <p className="text-gray-500">데이터를 불러오는 중...</p>
             </div>
+          ) : (
+            <>
+              {filteredPosts.map((post, index) => (
+                <NewsletterCard key={post.article_id} post={post} index={index} />
+              ))}
+
+              {filteredPosts.length === 0 && (
+                <div className="bg-white rounded-lg p-12 border border-gray-200 text-center">
+                  <p className="text-gray-500">검색 결과가 없습니다.</p>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

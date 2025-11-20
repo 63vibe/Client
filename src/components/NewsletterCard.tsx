@@ -4,13 +4,12 @@ import { Eye, ExternalLink, Clock, User, Sparkles } from 'lucide-react';
 import { Card } from './ui/card';
 
 interface Post {
-  id: string;
+  article_id: string;
   board: string;
-  title: string;
-  summary: string;
-  keywords: string[];
-  author: string;
-  date: string;
+  subject: string;
+  content_summary: string;
+  user_name: string;
+  write_date: string;
   views: number;
   isNew: boolean;
   matchedKeywords: string[];
@@ -24,15 +23,26 @@ interface NewsletterCardProps {
 
 export function NewsletterCard({ post, index }: NewsletterCardProps) {
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const today = new Date('2024-11-18');
-    const diffTime = Math.abs(today.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (!dateStr) return '날짜 없음';
     
-    if (diffDays === 0) return '오늘';
-    if (diffDays === 1) return '어제';
-    if (diffDays < 7) return `${diffDays}일 전`;
-    return dateStr;
+    try {
+      const date = new Date(dateStr);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      date.setHours(0, 0, 0, 0);
+      
+      const diffTime = Math.abs(today.getTime() - date.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 0) return '오늘';
+      if (diffDays === 1) return '어제';
+      if (diffDays < 7) return `${diffDays}일 전`;
+      
+      // 날짜 포맷팅 (YYYY-MM-DD)
+      return dateStr.split('T')[0];
+    } catch (error) {
+      return dateStr;
+    }
   };
 
   return (
@@ -63,21 +73,21 @@ export function NewsletterCard({ post, index }: NewsletterCardProps) {
               </div>
               
               <h3 className="text-gray-900 mb-2 hover:text-blue-600 cursor-pointer">
-                {post.title}
+                {post.subject}
               </h3>
               
               <p className="text-gray-600 mb-3 leading-relaxed">
-                {post.summary}
+                {post.content_summary}
               </p>
 
               <div className="flex items-center gap-4 text-sm text-gray-500">
                 <div className="flex items-center gap-1">
                   <User className="w-4 h-4" />
-                  {post.author}
+                  {post.user_name}
                 </div>
                 <div className="flex items-center gap-1">
                   <Clock className="w-4 h-4" />
-                  {formatDate(post.date)}
+                  {formatDate(post.write_date)}
                 </div>
                 <div className="flex items-center gap-1">
                   <Eye className="w-4 h-4" />
@@ -97,14 +107,6 @@ export function NewsletterCard({ post, index }: NewsletterCardProps) {
                   </div>
                 </div>
               )}
-
-              <div className="mt-3 flex items-center gap-2 flex-wrap">
-                {post.keywords.map(keyword => (
-                  <Badge key={keyword} variant="outline" className="text-xs">
-                    #{keyword}
-                  </Badge>
-                ))}
-              </div>
             </div>
 
             <Button variant="ghost" size="sm" className="flex-shrink-0">
