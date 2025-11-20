@@ -79,7 +79,6 @@ export function startEmailScheduler(): void {
   scheduledTask = cron.schedule(cronExpression, async () => {
     await runDailyEmailJob();
   }, {
-    scheduled: true,
     timezone: 'Asia/Seoul', // 한국 시간대
   });
 
