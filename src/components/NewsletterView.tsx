@@ -9,6 +9,7 @@ import { Badge } from './ui/badge';
 import { Card } from './ui/card';
 import { Calendar, Search, RefreshCw, Filter, X, Tag, Globe, TrendingUp, Building2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from './ui/pagination';
 import { getKeywordsByEmployeeId } from '@/src/lib/keywords';
 import { getUserFromStorage } from '@/src/lib/auth';
 import { getAllArticles, Article } from '@/src/lib/articles';
@@ -46,6 +47,7 @@ export function NewsletterView() {
   const [selectedDomains, setSelectedDomains] = useState<string[]>(['ai', 'finance']); // 선택된 도메인
   const [availableKeywords, setAvailableKeywords] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const boards = ['all', ...Array.from(new Set(posts.map(p => p.board)))];
 
@@ -167,6 +169,18 @@ export function NewsletterView() {
     
     return matchesSearch && matchesBoard && matchesDate && matchesKeywords;
   });
+
+  // 필터 변경 시 첫 페이지로 리셋
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterBoard, filterDate, selectedKeywords]);
+
+  // 페이지네이션 설정
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(filteredPosts.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedPosts = filteredPosts.slice(startIndex, endIndex);
 
   const handleRefresh = () => {
     console.log('Refreshing newsletter...');
@@ -378,13 +392,88 @@ export function NewsletterView() {
             </div>
           ) : (
             <>
-              {filteredPosts.map((post, index) => (
-                <NewsletterCard key={post.article_id} post={post} index={index} />
+              {paginatedPosts.map((post, index) => (
+                <NewsletterCard key={post.article_id} post={post} index={startIndex + index} />
               ))}
 
               {filteredPosts.length === 0 && (
                 <div className="bg-white rounded-lg p-12 border border-gray-200 text-center">
                   <p className="text-gray-500">검색 결과가 없습니다.</p>
+                </div>
+              )}
+
+              {filteredPosts.length > 0 && totalPages > 1 && (
+                <div className="flex justify-center mt-6">
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious 
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (currentPage > 1) {
+                              setCurrentPage(prev => prev - 1);
+                            }
+                          }}
+                          className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                        />
+                      </PaginationItem>
+                      
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                        // 페이지 번호 표시 로직 (현재 페이지 주변만 표시)
+                        if (
+                          page === 1 ||
+                          page === totalPages ||
+                          (page >= currentPage - 1 && page <= currentPage + 1)
+                        ) {
+                          return (
+                            <PaginationItem key={page}>
+                              <PaginationLink
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setCurrentPage(page);
+                                }}
+                                isActive={currentPage === page}
+                                className="cursor-pointer"
+                              >
+                                {page}
+                              </PaginationLink>
+                            </PaginationItem>
+                          );
+                        } else if (
+                          page === currentPage - 2 ||
+                          page === currentPage + 2
+                        ) {
+                          return (
+                            <PaginationItem key={page}>
+                              <PaginationEllipsis />
+                            </PaginationItem>
+                          );
+                        }
+                        return null;
+                      })}
+                      
+                      <PaginationItem>
+                        <PaginationNext 
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (currentPage < totalPages) {
+                              setCurrentPage(prev => prev + 1);
+                            }
+                          }}
+                          className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
+
+              {filteredPosts.length > 0 && (
+                <div className="text-center text-sm text-gray-500 mt-4">
+                  {startIndex + 1} - {Math.min(endIndex, filteredPosts.length)} / {filteredPosts.length}개
                 </div>
               )}
             </>
