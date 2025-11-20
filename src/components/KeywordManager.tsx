@@ -1,31 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
-import { Plus, X, TrendingUp, Search } from 'lucide-react';
+import { Plus, X, TrendingUp, Search, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Label } from './ui/label';
-
-interface Keyword {
-  id: string;
-  text: string;
-  matchCount: number;
-  addedDate: string;
-  category?: string;
-}
-
-const mockKeywords: Keyword[] = [
-  { id: '1', text: '워크샵', matchCount: 12, addedDate: '2024-11-01', category: '행사' },
-  { id: '2', text: 'AI', matchCount: 28, addedDate: '2024-11-01', category: '기술' },
-  { id: '3', text: '보안', matchCount: 15, addedDate: '2024-11-05', category: '인프라' },
-  { id: '4', text: '운영', matchCount: 34, addedDate: '2024-11-05', category: '인프라' },
-  { id: '5', text: '개발', matchCount: 45, addedDate: '2024-11-01', category: '기술' },
-  { id: '6', text: 'React', matchCount: 8, addedDate: '2024-11-10', category: '기술' },
-  { id: '7', text: '마케팅', matchCount: 6, addedDate: '2024-11-12', category: '비즈니스' },
-];
+import { Keyword } from '@/src/types/keyword';
+import { getKeywordsByEmployeeId, createKeyword, deleteKeyword, getKeywordCount } from '@/src/lib/keywords';
+import { getUserFromStorage } from '@/src/lib/auth';
+import { toast } from 'sonner';
 
 const suggestedKeywords = [
   '프로젝트', '스프린트', 'DevOps', '클라우드', 'DB', 
@@ -33,53 +19,124 @@ const suggestedKeywords = [
 ];
 
 export function KeywordManager() {
-  const [keywords, setKeywords] = useState<Keyword[]>(mockKeywords);
+  const [keywords, setKeywords] = useState<Keyword[]>([]);
   const [newKeyword, setNewKeyword] = useState('');
   const [newCategory, setNewCategory] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAdding, setIsAdding] = useState(false);
 
-  const handleAddKeyword = () => {
-    if (newKeyword.trim()) {
-      if (keywords.length >= 20) {
-        // 최대 20개 제한
+  // 키워드 목록 로드
+  useEffect(() => {
+    loadKeywords();
+  }, []);
+
+  const loadKeywords = async () => {
+    try {
+      setIsLoading(true);
+      const user = getUserFromStorage();
+      if (!user) {
+        toast.error('로그인이 필요합니다');
         return;
       }
-      const keyword: Keyword = {
-        id: Date.now().toString(),
+
+      const data = await getKeywordsByEmployeeId(user.employee_id);
+      setKeywords(data);
+    } catch (error) {
+      console.error('키워드 로드 오류:', error);
+      toast.error('키워드를 불러오는 중 오류가 발생했습니다');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAddKeyword = async () => {
+    if (!newKeyword.trim()) {
+      toast.error('키워드를 입력해주세요');
+      return;
+    }
+
+    const user = getUserFromStorage();
+    if (!user) {
+      toast.error('로그인이 필요합니다');
+      return;
+    }
+
+    // 최대 20개 제한 확인
+    const currentCount = await getKeywordCount(user.employee_id);
+    if (currentCount >= 20) {
+      toast.error('최대 20개까지 등록 가능합니다');
+      return;
+    }
+
+    setIsAdding(true);
+    try {
+      await createKeyword(user.employee_id, {
         text: newKeyword.trim(),
-        matchCount: 0,
-        addedDate: new Date().toISOString().split('T')[0],
-        category: newCategory || undefined
-      };
-      setKeywords([...keywords, keyword]);
+        category: newCategory.trim() || undefined,
+      });
+      toast.success('키워드가 추가되었습니다');
       setNewKeyword('');
       setNewCategory('');
       setIsDialogOpen(false);
+      await loadKeywords();
+    } catch (error: any) {
+      console.error('키워드 추가 오류:', error);
+      toast.error(error.message || '키워드 추가 중 오류가 발생했습니다');
+    } finally {
+      setIsAdding(false);
     }
   };
 
-  const handleRemoveKeyword = (id: string) => {
-    setKeywords(keywords.filter(k => k.id !== id));
-  };
-
-  const handleAddSuggested = (text: string) => {
-    if (!keywords.find(k => k.text === text)) {
-      if (keywords.length >= 20) {
-        // 최대 20개 제한
-        return;
-      }
-      const keyword: Keyword = {
-        id: Date.now().toString(),
-        text,
-        matchCount: 0,
-        addedDate: new Date().toISOString().split('T')[0]
-      };
-      setKeywords([...keywords, keyword]);
+  const handleRemoveKeyword = async (id: string) => {
+    try {
+      await deleteKeyword(id);
+      toast.success('키워드가 삭제되었습니다');
+      await loadKeywords();
+    } catch (error) {
+      console.error('키워드 삭제 오류:', error);
+      toast.error('키워드 삭제 중 오류가 발생했습니다');
     }
   };
 
-  const categories = Array.from(new Set(keywords.filter(k => k.category).map(k => k.category)));
+  const handleAddSuggested = async (text: string) => {
+    if (keywords.find(k => k.text === text)) {
+      toast.error('이미 등록된 키워드입니다');
+      return;
+    }
+
+    const user = getUserFromStorage();
+    if (!user) {
+      toast.error('로그인이 필요합니다');
+      return;
+    }
+
+    // 최대 20개 제한 확인
+    const currentCount = await getKeywordCount(user.employee_id);
+    if (currentCount >= 20) {
+      toast.error('최대 20개까지 등록 가능합니다');
+      return;
+    }
+
+    setIsAdding(true);
+    try {
+      await createKeyword(user.employee_id, {
+        text: text.trim(),
+      });
+      toast.success('키워드가 추가되었습니다');
+      await loadKeywords();
+    } catch (error: any) {
+      console.error('키워드 추가 오류:', error);
+      toast.error(error.message || '키워드 추가 중 오류가 발생했습니다');
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
+  const categories = Array.from(
+    new Set(keywords.filter(k => k.category).map(k => k.category as string))
+  );
 
   const filteredKeywords = keywords.filter(k => 
     k.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -87,6 +144,14 @@ export function KeywordManager() {
   );
 
   const isMaxKeywords = keywords.length >= 20;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -141,8 +206,15 @@ export function KeywordManager() {
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                   취소
                 </Button>
-                <Button onClick={handleAddKeyword}>
-                  추가
+                <Button onClick={handleAddKeyword} disabled={isAdding}>
+                  {isAdding ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      추가 중...
+                    </>
+                  ) : (
+                    '추가'
+                  )}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -155,8 +227,8 @@ export function KeywordManager() {
             <div className="text-blue-900">{keywords.length}개</div>
           </Card>
           <Card className="p-4 bg-green-50 border-green-200">
-            <div className="text-sm text-green-700 mb-1">총 매칭</div>
-            <div className="text-green-900">{keywords.reduce((sum, k) => sum + k.matchCount, 0)}건</div>
+            <div className="text-sm text-green-700 mb-1">총 키워드</div>
+            <div className="text-green-900">{keywords.length}개</div>
           </Card>
           <Card className="p-4 bg-purple-50 border-purple-200">
             <div className="text-sm text-purple-700 mb-1">카테고리</div>
@@ -190,7 +262,7 @@ export function KeywordManager() {
               variant="outline"
               size="sm"
               onClick={() => handleAddSuggested(keyword)}
-              disabled={keywords.some(k => k.text === keyword) || isMaxKeywords}
+              disabled={keywords.some(k => k.text === keyword) || isMaxKeywords || isAdding}
             >
               <Plus className="w-3 h-3 mr-1" />
               {keyword}
@@ -216,7 +288,6 @@ export function KeywordManager() {
                       className="pl-3 pr-2 py-2 text-sm flex items-center gap-2"
                     >
                       <span>{keyword.text}</span>
-                      <span className="text-xs text-gray-500">({keyword.matchCount})</span>
                       <button
                         onClick={() => handleRemoveKeyword(keyword.id)}
                         className="ml-1 hover:bg-gray-200 rounded-full p-0.5"
@@ -242,7 +313,6 @@ export function KeywordManager() {
                   className="pl-3 pr-2 py-2 text-sm flex items-center gap-2"
                 >
                   <span>{keyword.text}</span>
-                  <span className="text-xs text-gray-500">({keyword.matchCount})</span>
                   <button
                     onClick={() => handleRemoveKeyword(keyword.id)}
                     className="ml-1 hover:bg-gray-200 rounded-full p-0.5"

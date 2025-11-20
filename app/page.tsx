@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/src/components/ui/tabs';
 import { NewsletterView } from '@/src/components/NewsletterView';
 import { BoardManager } from '@/src/components/BoardManager';
@@ -8,23 +8,54 @@ import { KeywordManager } from '@/src/components/KeywordManager';
 import { SubscriptionSettings } from '@/src/components/SubscriptionSettings';
 import { AdminDashboard } from '@/src/components/AdminDashboard';
 import { UserStats } from '@/src/components/UserStats';
-import { SignUp } from '@/src/components/SignUp';
-import { Newspaper, Settings, Tag, LayoutDashboard, Database, BarChart3, LogIn } from 'lucide-react';
+import { Login } from '@/src/components/Login';
+import { Newspaper, Settings, Tag, LayoutDashboard, Database, BarChart3, LogOut } from 'lucide-react';
 import { Button } from '@/src/components/ui/button';
+import { getUserFromStorage, removeUserFromStorage } from '@/src/lib/auth';
+import { LoginResponse } from '@/src/types/user';
+import { toast } from 'sonner';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('newsletter');
-  const [isAdmin, setIsAdmin] = useState(false); // 관리자/일반 유저 구분
-  const [showSignUp, setShowSignUp] = useState(false);
+  const [user, setUser] = useState<LoginResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // 계정 타입 토글 (데모용)
-  const toggleAccountType = () => {
-    setIsAdmin(!isAdmin);
+  // 로그인 상태 확인
+  useEffect(() => {
+    const savedUser = getUserFromStorage();
+    setUser(savedUser);
+    setIsLoading(false);
+  }, []);
+
+  // 로그인 성공 핸들러
+  const handleLoginSuccess = () => {
+    const savedUser = getUserFromStorage();
+    setUser(savedUser);
+    setActiveTab('newsletter'); // 뉴스레터 탭으로 이동
   };
 
-  if (showSignUp) {
-    return <SignUp onBack={() => setShowSignUp(false)} />;
+  // 로그아웃 핸들러
+  const handleLogout = () => {
+    removeUserFromStorage();
+    setUser(null);
+    toast.success('로그아웃되었습니다');
+  };
+
+  // 로딩 중
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-600">로딩 중...</div>
+      </div>
+    );
   }
+
+  // 로그인되지 않은 경우
+  if (!user) {
+    return <Login onSuccess={handleLoginSuccess} />;
+  }
+
+  const isAdmin = user.role === 'admin';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -42,21 +73,17 @@ export default function Home() {
             </div>
             
             <div className="flex items-center gap-3">
-              {/* 데모용: 계정 타입 전환 버튼 */}
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={toggleAccountType}
-              >
-                {isAdmin ? '👤 관리자' : '👤 일반 유저'}
-              </Button>
+              <div className="text-sm text-gray-600">
+                <span className="font-medium">{user.name}</span>
+                <span className="text-gray-400 ml-2">({user.employee_id})</span>
+              </div>
               <Button 
                 variant="ghost" 
                 size="sm"
-                onClick={() => setShowSignUp(true)}
+                onClick={handleLogout}
               >
-                <LogIn className="w-4 h-4 mr-2" />
-                회원가입
+                <LogOut className="w-4 h-4 mr-2" />
+                로그아웃
               </Button>
             </div>
           </div>
