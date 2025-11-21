@@ -65,30 +65,57 @@ export function SubscriptionSettings() {
       return;
     }
 
+    // Lambda 엔드포인트 URL 가져오기
+    const lambdaEndpoint = process.env.NEXT_PUBLIC_LAMBDA_ENDPOINT;
+    if (!lambdaEndpoint) {
+      toast.error('Lambda 엔드포인트가 설정되지 않았습니다');
+      return;
+    }
+
     setIsSendingTest(true);
 
     try {
-      const response = await fetch('/api/email/test-send', {
+      // HTML 템플릿 생성 (Lambda의 html 필드에 전달할 내용)
+      const htmlContent = `<article>
+  <h2>1. 경조사 – NEW</h2>
+  <h3>[부고] MS솔루션운영팀 윤연경 프로 외조부상</h3>
+  <p>MS솔루션운영팀 윤연경 프로가 별세했으며, 고대안암병원 장례식장 206호에서 11월 23일 발인될 예정이고, 조문은 사양하니 우리은행 계좌(1002-550-737941, 계좌주: 윤연경)로 위로금을 보내 달라는 안내입니다.</p>
+  <p>작성자: 정제원 / 오늘 / 100뷰</p>
+  <hr/>
+  <h2>2. 경조사 – NEW</h2>
+  <h3>[부고] HR솔루션사업팀 김영철 프로 부친상</h3>
+  <p>HR솔루션사업팀 김영철 프로의 부친이 고대안산병원 장례식장 B102호에서 발인(11월 23일)되었으며, 부고와 조의금 계좌(국민은행 070-21-0713231, 계좌주 김영철) 정보가 안내되었습니다.</p>
+  <p>작성자: 김성원 / 오늘 / 119뷰</p>
+</article>`;
+
+      // Lambda로 전달할 payload
+      const payload = {
+        html: htmlContent,
+        subject: '테스트 이메일',
+        to: email,
+      };
+
+      // Lambda 직접 호출
+      const response = await fetch(lambdaEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          employee_id: user.employee_id,
-          email: email,
-        }),
+        body: JSON.stringify(payload),
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
-      if (data.success) {
-        toast.success(`테스트 이메일이 ${email}로 발송되었습니다`);
-      } else {
-        toast.error(data.error || '테스트 이메일 발송에 실패했습니다');
+      // Lambda 응답 확인
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || data.message || `HTTP ${response.status}: ${response.statusText}`);
       }
-    } catch (error) {
+
+      // 성공 메시지 표시
+      toast.success('테스트 메일 발송 완료');
+    } catch (error: any) {
       console.error('테스트 이메일 발송 오류:', error);
-      toast.error('테스트 이메일 발송 중 오류가 발생했습니다');
+      toast.error(error.message || '테스트 이메일 발송 중 오류가 발생했습니다');
     } finally {
       setIsSendingTest(false);
     }
