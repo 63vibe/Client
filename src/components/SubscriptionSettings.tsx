@@ -65,13 +65,6 @@ export function SubscriptionSettings() {
       return;
     }
 
-    // Lambda 엔드포인트 URL 가져오기
-    const lambdaEndpoint = process.env.NEXT_PUBLIC_LAMBDA_ENDPOINT;
-    if (!lambdaEndpoint) {
-      toast.error('Lambda 엔드포인트가 설정되지 않았습니다');
-      return;
-    }
-
     setIsSendingTest(true);
 
     try {
@@ -88,25 +81,22 @@ export function SubscriptionSettings() {
   <p>작성자: 김성원 / 오늘 / 119뷰</p>
 </article>`;
 
-      // Lambda로 전달할 payload
-      const payload = {
-        html: htmlContent,
-        subject: '테스트 이메일',
-        to: email,
-      };
-
-      // Lambda 직접 호출
-      const response = await fetch(lambdaEndpoint, {
+      // 서버 사이드 API Route를 통해 Lambda 호출
+      const response = await fetch('/api/email/test-send-lambda', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          html: htmlContent,
+          subject: '테스트 이메일',
+          to: email,
+        }),
       });
 
       const data = await response.json().catch(() => ({}));
 
-      // Lambda 응답 확인
+      // 응답 확인
       if (!response.ok || !data.success) {
         throw new Error(data.error || data.message || `HTTP ${response.status}: ${response.statusText}`);
       }
@@ -202,7 +192,7 @@ export function SubscriptionSettings() {
                           발송 중...
                         </>
                       ) : (
-                        '테스트'
+                        '발송'
                       )}
                     </Button>
                   </div>
