@@ -9,6 +9,7 @@ import { SubscriptionSettings } from '@/src/components/SubscriptionSettings';
 import { AdminDashboard } from '@/src/components/AdminDashboard';
 import { UserStats } from '@/src/components/UserStats';
 import { Login } from '@/src/components/Login';
+import { ExternalLogin } from '@/src/components/ExternalLogin';
 import { Newspaper, Settings, Tag, LayoutDashboard, Database, BarChart3, LogOut } from 'lucide-react';
 import { Button } from '@/src/components/ui/button';
 import { getUserFromStorage, removeUserFromStorage } from '@/src/lib/auth';
@@ -52,7 +53,7 @@ export default function Home() {
 
   // 로그인되지 않은 경우
   if (!user) {
-    return <Login onSuccess={handleLoginSuccess} />;
+    return <ExternalLogin onSuccess={handleLoginSuccess} />;
   }
 
   const isAdmin = user.role === 'admin';
