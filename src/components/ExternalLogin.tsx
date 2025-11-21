@@ -122,13 +122,15 @@ export function ExternalLogin({ onSuccess }: ExternalLoginProps) {
   };
 
   // OTP 검증 성공 핸들러
-  const handleOTPVerified = (verifiedOtpId: string, verifiedOtp: string) => {
+  const handleOTPVerified = async (verifiedOtpId: string, verifiedOtp: string) => {
     // OTP 값 저장
     setOtpId(verifiedOtpId);
     setOtp(verifiedOtp);
-    // 로그인 화면으로 돌아가기 (자동 로그인 시도하지 않음)
+    // 로그인 화면으로 돌아가기
     setShowOTP(false);
-    toast.success('OTP 인증이 완료되었습니다. 로그인 버튼을 눌러주세요.');
+    toast.success('OTP 인증이 완료되었습니다. 로그인을 진행합니다.');
+    // 자동으로 로그인 시도
+    await performLogin(verifiedOtpId, verifiedOtp);
   };
 
   // OTP 화면 표시
