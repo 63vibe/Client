@@ -68,7 +68,7 @@ export function NewsletterView() {
       try {
         const user = getUserFromStorage();
         if (!user) {
-          setSelectedDomains(['ai', 'finance']); // 로그인하지 않은 경우 기본값
+          setSelectedDomains([]); // 로그인하지 않은 경우 빈 배열
           return;
         }
 
@@ -78,12 +78,12 @@ export function NewsletterView() {
           .map(ud => domainNameToId[ud.domain])
           .filter(id => id !== undefined) as string[];
         
-        // 사용자가 구독한 도메인이 있으면 그것을 사용, 없으면 기본값
-        setSelectedDomains(domainIds.length > 0 ? domainIds : ['ai', 'finance']);
+        // 사용자가 구독한 도메인이 있으면 그것을 사용, 없으면 빈 배열
+        setSelectedDomains(domainIds.length > 0 ? domainIds : []);
       } catch (error) {
         console.error('사용자 도메인 로드 오류:', error);
-        // 오류 발생 시 기본값 사용
-        setSelectedDomains(['ai', 'finance']);
+        // 오류 발생 시 빈 배열
+        setSelectedDomains([]);
       }
     };
 
