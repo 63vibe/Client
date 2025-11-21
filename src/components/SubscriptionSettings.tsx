@@ -12,6 +12,8 @@ import { Mail, Clock, Bell, CheckCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getUserFromStorage } from '@/src/lib/auth';
 import { supabase } from '@/src/lib/supabase';
+import { Article } from '@/src/lib/articles';
+import { NewsArticle } from '@/src/lib/news_articles';
 
 export function SubscriptionSettings() {
   const [emailEnabled, setEmailEnabled] = useState(true);
@@ -68,18 +70,130 @@ export function SubscriptionSettings() {
     setIsSendingTest(true);
 
     try {
-      // HTML 템플릿 생성 (Lambda의 html 필드에 전달할 내용)
-      const htmlContent = `<article>
-  <h2>1. 경조사 – NEW</h2>
-  <h3>[부고] MS솔루션운영팀 윤연경 프로 외조부상</h3>
-  <p>MS솔루션운영팀 윤연경 프로가 별세했으며, 고대안암병원 장례식장 206호에서 11월 23일 발인될 예정이고, 조문은 사양하니 우리은행 계좌(1002-550-737941, 계좌주: 윤연경)로 위로금을 보내 달라는 안내입니다.</p>
-  <p>작성자: 정제원 / 오늘 / 100뷰</p>
-  <hr/>
-  <h2>2. 경조사 – NEW</h2>
-  <h3>[부고] HR솔루션사업팀 김영철 프로 부친상</h3>
-  <p>HR솔루션사업팀 김영철 프로의 부친이 고대안산병원 장례식장 B102호에서 발인(11월 23일)되었으며, 부고와 조의금 계좌(국민은행 070-21-0713231, 계좌주 김영철) 정보가 안내되었습니다.</p>
-  <p>작성자: 김성원 / 오늘 / 119뷰</p>
-</article>`;
+      // 오늘 날짜 계산 (YYYY-MM-DD 형식)
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStr = today.toISOString().split('T')[0];
+      
+      // 오늘 날짜를 news_articles 형식으로 변환 (예: "Fri, 21 Nov 2025 02:00:00 +0900")
+      // 날짜 부분만 비교하기 위해 오늘 날짜의 시작과 끝 시간 범위 생성
+      const todayStart = new Date(today);
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date(today);
+      todayEnd.setHours(23, 59, 59, 999);
+
+      // articles 테이블에서 오늘 write_date인 게시물 조회
+      const { data: articlesData, error: articlesError } = await supabase
+        .from('articles')
+        .select('*')
+        .gte('write_date', `${todayStr}T00:00:00`)
+        .lt('write_date', `${todayStr}T23:59:59`)
+        .order('write_date', { ascending: false });
+
+      if (articlesError) {
+        console.error('게시물 조회 오류:', articlesError);
+        throw new Error('게시물을 불러오는 중 오류가 발생했습니다');
+      }
+
+      // news_articles 테이블에서 모든 뉴스 기사 조회 후 클라이언트에서 오늘 날짜 필터링
+      // pub_date 형식이 "Fri, 21 Nov 2025 02:00:00 +0900"이므로 서버 사이드 필터링이 어려움
+      const { data: allNewsData, error: newsError } = await supabase
+        .from('news_articles')
+        .select('*')
+        .order('pub_date', { ascending: false });
+
+      if (newsError) {
+        console.error('뉴스 기사 조회 오류:', newsError);
+        throw new Error('뉴스 기사를 불러오는 중 오류가 발생했습니다');
+      }
+
+      // 오늘 날짜인 뉴스 기사만 필터링
+      const newsData = (allNewsData || []).filter((news: any) => {
+        if (!news.pub_date) return false;
+        try {
+          // "Fri, 21 Nov 2025 02:00:00 +0900" 형식을 Date로 파싱
+          const pubDate = new Date(news.pub_date);
+          // 날짜 부분만 비교 (시간 제외)
+          return pubDate >= todayStart && pubDate <= todayEnd;
+        } catch (error) {
+          console.error('날짜 파싱 오류:', news.pub_date, error);
+          return false;
+        }
+      });
+
+      if (newsError) {
+        console.error('뉴스 기사 조회 오류:', newsError);
+        throw new Error('뉴스 기사를 불러오는 중 오류가 발생했습니다');
+      }
+
+      // HTML 템플릿 생성 (글자 크기 조정을 위한 스타일 포함)
+      let htmlContent = `<article style="font-size: 14px; line-height: 1.6; color: #333;">
+  <style>
+    article h1 { font-size: 20px; font-weight: bold; margin: 20px 0 15px 0; color: #1a1a1a; }
+    article h2 { font-size: 16px; font-weight: bold; margin: 15px 0 10px 0; color: #2c3e50; }
+    article h3 { font-size: 15px; font-weight: 600; margin: 12px 0 8px 0; color: #34495e; }
+    article p { font-size: 14px; margin: 8px 0; color: #555; }
+    article hr { border: none; border-top: 1px solid #e0e0e0; margin: 15px 0; }
+  </style>`;
+
+      // articles 데이터 추가
+      if (articlesData && articlesData.length > 0) {
+        // 사내게시물 뉴스레터 섹션 제목 추가
+        htmlContent += '\n  <h3>사내게시물 뉴스레터</h3>';
+        
+        articlesData.forEach((article: any, index: number) => {
+          const articleNum = index + 1;
+          const boardName = article.board_name || '기타';
+          const subject = article.subject || '제목 없음';
+          const summary = article.content_summary || article.original_content?.substring(0, 200) || '';
+          const author = article.user_name || '알 수 없음';
+          const views = article.views || 0;
+
+          htmlContent += `
+  <h4>${articleNum}. ${boardName}</h4>
+  <h5>${subject}</h5>
+  <p>${summary}</p>
+  <p>작성자: ${author} / 오늘 / ${views}뷰</p>`;
+          
+          if (index < articlesData.length - 1) {
+            htmlContent += '\n  <hr/>';
+          }
+        });
+      }
+
+      // news_articles 데이터 추가
+      if (newsData && newsData.length > 0) {
+        // articles와 news_articles 사이 구분선 및 도메인 뉴스레터 섹션 제목 추가
+        if (articlesData && articlesData.length > 0) {
+          htmlContent += '\n  <hr style="margin: 25px 0; border-top: 2px solid #ccc;"/>';
+        }
+        htmlContent += '\n  <h3>도메인 뉴스레터</h3>';
+        
+        newsData.forEach((news: any, index: number) => {
+          const newsNum = index + 1;
+          const domain = news.domain || '기타';
+          const title = news.title || '제목 없음';
+          const summary = news.summary || news.description?.substring(0, 200) || '';
+          const publisher = news.publisher || '알 수 없음';
+
+          htmlContent += `
+  <h4>${newsNum}. ${domain}</h4>
+  <h5>${title}</h5>
+  <p>${summary}</p>
+  <p>출처: ${publisher} / 오늘</p>`;
+          
+          if (index < newsData.length - 1) {
+            htmlContent += '\n  <hr/>';
+          }
+        });
+      }
+
+      // 데이터가 없는 경우
+      if ((!articlesData || articlesData.length === 0) && (!newsData || newsData.length === 0)) {
+        htmlContent += '\n  <p>오늘 발행된 게시물이 없습니다.</p>';
+      }
+
+      htmlContent += '\n</article>';
 
       // 서버 사이드 API Route를 통해 Lambda 호출
       const response = await fetch('/api/email/test-send-lambda', {
