@@ -2,11 +2,10 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  // 정적 사이트 생성 (out 폴더에 출력)
-  output: 'export',
+  // output: 'export' 제거 - API Routes 사용을 위해 필요
   trailingSlash: false,
 
-  // 이미지 최적화 비활성화 (정적 export 시 필요)
+  // 이미지 최적화 설정
   images: {
     unoptimized: true,
   },
