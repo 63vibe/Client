@@ -12,7 +12,6 @@ import { Mail, Clock, Bell, CheckCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getUserFromStorage } from '@/src/lib/auth';
 import { supabase } from '@/src/lib/supabase';
-import { sendTestEmail } from '@/src/lib/email/actions';
 
 export function SubscriptionSettings() {
   const [emailEnabled, setEmailEnabled] = useState(true);
@@ -69,13 +68,23 @@ export function SubscriptionSettings() {
     setIsSendingTest(true);
 
     try {
-      // Server Action 직접 호출 (API 라우트 거치지 않음)
-      const result = await sendTestEmail(user.employee_id, email, user.name);
+      const response = await fetch('/api/email/test-send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          employee_id: user.employee_id,
+          email: email,
+        }),
+      });
 
-      if (result.success) {
-        toast.success(result.message || `테스트 이메일이 ${email}로 발송되었습니다`);
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success(`테스트 이메일이 ${email}로 발송되었습니다`);
       } else {
-        toast.error(result.message || '테스트 이메일 발송에 실패했습니다');
+        toast.error(data.error || '테스트 이메일 발송에 실패했습니다');
       }
     } catch (error) {
       console.error('테스트 이메일 발송 오류:', error);
