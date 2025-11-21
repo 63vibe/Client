@@ -33,17 +33,15 @@
 
 ## 현재 설정
 
-현재 프로젝트는 정적 export로 설정되어 있습니다:
-- `next.config.js`: `output: 'export'` 설정됨
-- `package.json`: `build` 스크립트에 `next export` 포함
-- `amplify.yml`: `baseDirectory: out` 설정됨
+현재 프로젝트는 **SSR 배포**를 사용하여 API Routes가 활성화되어 있습니다:
+- `next.config.js`: `output: 'export'` 설정 제거 (SSR 사용)
+- `package.json`: `npm run build`로 SSR 번들 생성
+- `amplify.yml`: `baseDirectory: .next` 설정 (Amplify SSR 아티팩트)
 
 이 설정으로 배포하면:
-- ✅ 정적 파일들이 `/out` 폴더에 생성됨
-- ✅ CloudFront가 정상적으로 서빙
-- ✅ 404 문제 해결
-- ❌ API Routes 작동 안 함
-- ❌ 이메일 발송 기능 사용 불가
+- ✅ API Routes 정상 동작 (테스트 이메일 포함)
+- ✅ CloudFront/Amplify SSR로 페이지 렌더링
+- ⚠️ 완전한 정적 배포가 아니므로 SSR 인프라가 필요
 
 ## 권장 사항
 
